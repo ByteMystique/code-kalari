@@ -271,7 +271,7 @@ function playNextSignInQueue() {
 
             // Estimate GIF duration (most sign language GIFs are 2-3 seconds)
             // You can adjust this based on your actual GIF durations
-            const gifDuration = 2500; // 2.5 seconds default
+            const gifDuration = 1000; // 2.5 seconds default
 
             // Wait for the GIF to complete before playing next
             setTimeout(() => {
