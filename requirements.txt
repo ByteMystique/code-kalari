@@ -1,4 +1,6 @@
-flask
-flask-cors
 spacy
 en-core-web-sm
+flask
+flask-cors
+yt-dlp
+openai-whisper
