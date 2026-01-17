@@ -11,8 +11,29 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     } else if (request.action === 'checkHealth') {
         checkBackendHealth(sendResponse);
         return true;
+    } else if (request.action === 'fetchGif') {
+        fetchGif(request.url, sendResponse);
+        return true;
     }
 });
+
+async function fetchGif(url, sendResponse) {
+    try {
+        const response = await fetch(url);
+        if (!response.ok) throw new Error('404');
+        const blob = await response.blob();
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            sendResponse({ success: true, dataUrl: reader.result });
+        };
+        reader.onerror = () => {
+            sendResponse({ success: false });
+        };
+        reader.readAsDataURL(blob);
+    } catch (e) {
+        sendResponse({ success: false, error: e.message });
+    }
+}
 
 // Handle transcription request
 async function handleTranscriptionRequest(youtubeUrl, sendResponse) {

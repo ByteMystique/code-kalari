@@ -13,6 +13,21 @@ let signQueue = [];
 let currentlyPlayingSign = null;
 let isPlayingAnimation = false;
 
+// 3D Animator Instance
+let signAnimator = null;
+
+// Dynamic Import Helper
+async function loadSignAnimator() {
+    try {
+        const src = chrome.runtime.getURL('sign-animator.js');
+        const module = await import(src);
+        return module.SignAnimator;
+    } catch (e) {
+        console.error('Failed to load SignAnimator module', e);
+        return null;
+    }
+}
+
 // Initialize when YouTube video player is ready
 function initializeExtension() {
     // Find the YouTube video element
@@ -41,7 +56,7 @@ function initializeExtension() {
 }
 
 // Create the sign language overlay container
-function createSignOverlay() {
+async function createSignOverlay() {
     if (signOverlay) return;
 
     signOverlay = document.createElement('div');
@@ -54,14 +69,35 @@ function createSignOverlay() {
         <span class="sign-title">Sign Language</span>
         <button class="sign-close" id="closeSignOverlay">×</button>
       </div>
-      <div class="sign-animation">
-        <img id="signGif" src="" alt="Sign language animation">
+      <div class="sign-animation" id="signAnimationContainer" style="position: relative; min-height: 200px;">
+        <img id="signGif" src="" alt="Sign language animation" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; z-index: 2;">
+        <div id="sign3DCanvas" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1;"></div>
       </div>
       <div class="sign-status" id="signStatus">Loading...</div>
     </div>
   `;
 
     document.body.appendChild(signOverlay);
+
+    // Initialize 3D Animator
+    const SignAnimatorClass = await loadSignAnimator();
+    if (SignAnimatorClass) {
+        // Pass a callback to update the UI text when the 3D avatar signs a letter
+        signAnimator = new SignAnimatorClass('sign3DCanvas', (text) => {
+            // For 3D, we are getting single letters. We might want to append them or show them.
+            // The user asked to "show entire word as mixture of letters".
+            // Let's assume we show the current letter being signed, or build up the word.
+            // For now, let's show the current letter clearly.
+
+            // Get current text content
+            const statusEl = document.getElementById('signStatus');
+            if (statusEl) {
+                if (text === '') statusEl.innerHTML = '';
+                else statusEl.innerHTML = `Spelling: <b>${text}</b>`;
+            }
+        });
+        await signAnimator.init();
+    }
 
     // Close button handler
     document.getElementById('closeSignOverlay').addEventListener('click', () => {
@@ -177,6 +213,8 @@ function requestTranscription(videoUrl) {
     );
 }
 
+let lastTokenStart = -1;
+
 // Start sign language animation synchronized with video
 function startSignAnimation() {
     if (!videoElement || !currentSignTokens) return;
@@ -191,13 +229,23 @@ function startSignAnimation() {
         }
     };
 
-    // Update every 100ms for smooth transitions
-    animationInterval = setInterval(updateAnimation, 100);
+    // Update every 50ms for smooth transitions
+    animationInterval = setInterval(updateAnimation, 50);
 
     // Also update on video events
     videoElement.addEventListener('play', updateAnimation);
     videoElement.addEventListener('pause', updateAnimation);
-    videoElement.addEventListener('seeked', updateAnimation);
+    videoElement.addEventListener('seeked', () => {
+        lastTokenStart = -1; // Reset tracking on seek
+        signQueue = []; // Clear queue on seek? Maybe better to clear to avoid stale signs
+        isPlayingAnimation = false;
+        // Also clear 3D/GIF
+        const signGif = document.getElementById('signGif');
+        if (signGif) signGif.style.display = 'none';
+        if (signAnimator) signAnimator.clear();
+
+        updateAnimation();
+    });
 
     // Initial update
     updateAnimation();
@@ -224,12 +272,33 @@ function displaySignForTime(currentTime) {
     );
 
     if (currentToken && currentToken.tokens.length > 0) {
-        // Add all tokens from this segment to the queue if not already playing
-        if (!isPlayingAnimation) {
-            signQueue = [...currentToken.tokens];
-            playNextSignInQueue();
+        // Only add to queue if it's a NEW segment we haven't processed
+        // Use a small epsilon for float comparison just in case
+        if (Math.abs(currentToken.start - lastTokenStart) > 0.1) {
+            console.log("New segment detected:", currentToken.tokens);
+            lastTokenStart = currentToken.start;
+
+            // Safety: If queue is massively backed up (e.g. paused video but queue kept filling?), clear it
+            if (signQueue.length > 50) {
+                console.warn("Queue too long, clearing...", signQueue);
+                signQueue = [];
+            }
+
+            // Smart Append: Avoid pushing duplicates that might result from overlapping segments
+            // Only add word if it's different from the last word in the queue
+            currentToken.tokens.forEach(word => {
+                if (signQueue.length === 0 || signQueue[signQueue.length - 1].toLowerCase() !== word.toLowerCase()) {
+                    signQueue.push(word);
+                }
+            });
+
+            // If not currently playing, start the queue
+            if (!isPlayingAnimation) {
+                playNextSignInQueue();
+            }
         }
-    } else if (!isPlayingAnimation) {
+    } else if (!isPlayingAnimation && signQueue.length === 0) {
+        // Only show listening if idle AND nothing in queue
         showSign('', 'Listening...');
     }
 }
@@ -240,6 +309,8 @@ function playNextSignInQueue() {
         isPlayingAnimation = false;
         currentlyPlayingSign = null;
         showSign('', 'Listening...');
+        // Reset 3D animator if idle
+        if (signAnimator) signAnimator.clear();
         return;
     }
 
@@ -248,79 +319,77 @@ function playNextSignInQueue() {
     currentlyPlayingSign = word;
 
     const signGif = document.getElementById('signGif');
+    const sign3DCanvas = document.getElementById('sign3DCanvas');
 
     if (!signGif) {
         playNextSignInQueue(); // Skip if element not found
         return;
     }
 
+    // Update status to show what we are playing
+    showSign(word, `Signing: ${word.toUpperCase()}`);
+
     if (word) {
         const gifPath = `${BACKEND_URL}/gif/${word.toLowerCase()}.gif`;
-        console.log(`🎬 Playing GIF for word: "${word}" from ${gifPath}`);
+        console.log(`🎬 Requesting GIF for word: "${word}" from ${gifPath}`);
 
-        // Create a new image to get the GIF duration
-        const tempImg = new Image();
-        tempImg.src = gifPath;
+        // Fetch GIF via background script to bypass Mixed Content (HTTP vs HTTPS)
+        chrome.runtime.sendMessage({ action: 'fetchGif', url: gifPath }, (response) => {
+            // Handle async response
+            if (response && response.success && response.dataUrl) {
+                console.log(`✅ GIF loaded successfully for word: "${word}"`);
 
-        tempImg.onload = () => {
-            console.log(`✅ GIF loaded successfully for word: "${word}"`);
+                // Show GIF, Hide 3D
+                signGif.src = response.dataUrl;
+                signGif.style.display = 'block';
+                if (sign3DCanvas) sign3DCanvas.style.opacity = '0';
 
-            // Set the GIF
-            signGif.src = gifPath;
-            signGif.style.display = 'block';
+                if (signAnimator) signAnimator.clear(); // Stop 3D if it was playing
 
-            // Estimate GIF duration (most sign language GIFs are 2-3 seconds)
-            // You can adjust this based on your actual GIF durations
-            const gifDuration = 1000; // 2.5 seconds default
+                const gifDuration = 1500;
 
-            // Wait for the GIF to complete before playing next
-            setTimeout(() => {
-                playNextSignInQueue();
-            }, gifDuration);
-        };
+                setTimeout(() => {
+                    playNextSignInQueue();
+                }, gifDuration);
+            } else {
+                // Fallback to 3D
+                console.warn(`❌ GIF not found or failed for word: "${word}". Falling back to 3D.`);
 
-        tempImg.onerror = () => {
-            console.warn(`❌ GIF not found for word: "${word}" (${word.toLowerCase()}.gif)`);
-            signGif.style.display = 'none';
+                // Hide GIF, Show 3D
+                signGif.style.display = 'none';
+                signGif.src = '';
 
-            // Move to next sign after a short delay
-            setTimeout(() => {
-                playNextSignInQueue();
-            }, 1000);
-        };
+                if (sign3DCanvas) {
+                    sign3DCanvas.style.opacity = '1';
+                    sign3DCanvas.style.zIndex = '10';
+                }
+
+                if (signAnimator) {
+                    showSign(null, `Spelling: ${word.toUpperCase()}`);
+                    if (signAnimator.handleResize) signAnimator.handleResize();
+
+                    // Use closure to handle async await in callback
+                    (async () => {
+                        try {
+                            await signAnimator.playWord(word);
+                        } catch (e) { console.error(e); }
+                        playNextSignInQueue();
+                    })();
+                } else {
+                    console.error("SignAnimator not initialized, skipping.");
+                    setTimeout(() => { playNextSignInQueue(); }, 1000);
+                }
+            }
+        });
     } else {
         playNextSignInQueue();
     }
 }
 
-// Show sign language animation
+// Show sign language animation (Simplified status update mainly)
 function showSign(word, displayText) {
-    const signGif = document.getElementById('signGif');
-    const signWord = document.getElementById('signWord');
-
-    if (!signGif || !signWord) return;
-
-    if (word) {
-        // Try to load the GIF for this word
-        const gifPath = chrome.runtime.getURL(`gif/${word.toLowerCase()}.gif`);
-
-        console.log(`🎬 Trying to load GIF for word: "${word}" from ${gifPath}`);
-
-        signGif.src = gifPath;
-        signGif.style.display = 'block';
-        signGif.onerror = () => {
-            // Fallback if GIF not found
-            console.warn(`❌ GIF not found for word: "${word}" (${word.toLowerCase()}.gif)`);
-            signGif.style.display = 'none';
-        };
-        signGif.onload = () => {
-            console.log(`✅ GIF loaded successfully for word: "${word}"`);
-        };
-    } else {
-        signGif.style.display = 'none';
-    }
-
-    signWord.textContent = displayText;
+    const signStatus = document.getElementById('signStatus');
+    if (signStatus) signStatus.textContent = displayText;
 }
 
 // Show status message
