@@ -6,6 +6,9 @@ let currentSignTokens = null;
 let isOverlayEnabled = false;
 let videoElement = null;
 let animationInterval = null;
+let signQueue = [];
+let currentlyPlayingSign = null;
+let isPlayingAnimation = false;
 
 // Initialize when YouTube video player is ready
 function initializeExtension() {
@@ -50,7 +53,6 @@ function createSignOverlay() {
       </div>
       <div class="sign-animation">
         <img id="signGif" src="" alt="Sign language animation">
-        <div class="sign-word" id="signWord"></div>
       </div>
       <div class="sign-status" id="signStatus">Loading...</div>
     </div>
@@ -219,17 +221,72 @@ function displaySignForTime(currentTime) {
     );
 
     if (currentToken && currentToken.tokens.length > 0) {
-        // Calculate which token to show based on time within the segment
-        const segmentDuration = currentToken.end - currentToken.start;
-        const timeInSegment = currentTime - currentToken.start;
-        const tokenIndex = Math.floor(
-            (timeInSegment / segmentDuration) * currentToken.tokens.length
-        );
-
-        const word = currentToken.tokens[tokenIndex] || currentToken.tokens[0];
-        showSign(word, word);
-    } else {
+        // Add all tokens from this segment to the queue if not already playing
+        if (!isPlayingAnimation) {
+            signQueue = [...currentToken.tokens];
+            playNextSignInQueue();
+        }
+    } else if (!isPlayingAnimation) {
         showSign('', 'Listening...');
+    }
+}
+
+// Play the next sign in the queue
+function playNextSignInQueue() {
+    if (signQueue.length === 0) {
+        isPlayingAnimation = false;
+        currentlyPlayingSign = null;
+        showSign('', 'Listening...');
+        return;
+    }
+
+    isPlayingAnimation = true;
+    const word = signQueue.shift(); // Get the first word from queue
+    currentlyPlayingSign = word;
+
+    const signGif = document.getElementById('signGif');
+
+    if (!signGif) {
+        playNextSignInQueue(); // Skip if element not found
+        return;
+    }
+
+    if (word) {
+        const gifPath = chrome.runtime.getURL(`gif/${word.toLowerCase()}.gif`);
+        console.log(`🎬 Playing GIF for word: "${word}" from ${gifPath}`);
+
+        // Create a new image to get the GIF duration
+        const tempImg = new Image();
+        tempImg.src = gifPath;
+
+        tempImg.onload = () => {
+            console.log(`✅ GIF loaded successfully for word: "${word}"`);
+
+            // Set the GIF
+            signGif.src = gifPath;
+            signGif.style.display = 'block';
+
+            // Estimate GIF duration (most sign language GIFs are 2-3 seconds)
+            // You can adjust this based on your actual GIF durations
+            const gifDuration = 2500; // 2.5 seconds default
+
+            // Wait for the GIF to complete before playing next
+            setTimeout(() => {
+                playNextSignInQueue();
+            }, gifDuration);
+        };
+
+        tempImg.onerror = () => {
+            console.warn(`❌ GIF not found for word: "${word}" (${word.toLowerCase()}.gif)`);
+            signGif.style.display = 'none';
+
+            // Move to next sign after a short delay
+            setTimeout(() => {
+                playNextSignInQueue();
+            }, 1000);
+        };
+    } else {
+        playNextSignInQueue();
     }
 }
 

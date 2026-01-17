@@ -32,3 +32,6 @@ node_modules/
 
 # Static generated files
 static/signs/*.gif
+
+# Backend generated VTT files
+backend/*.vtt
