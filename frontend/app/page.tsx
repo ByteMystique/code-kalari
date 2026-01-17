@@ -38,13 +38,8 @@ export default function Home() {
   };
 
   return (
-    <div ref={containerRef} className="flex flex-col gap-32 pb-20 relative overflow-hidden bg-[#0f172a]">
-      {/* Background Glows */}
-      <div className="fixed top-0 left-0 w-full h-full overflow-hidden pointer-events-none z-0">
-        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-brand-start/10 rounded-full blur-[120px] animate-pulse" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-brand-end/10 rounded-full blur-[120px]" />
-        <div className="absolute top-[40%] left-[20%] w-[30%] h-[30%] bg-blue-500/5 rounded-full blur-[100px]" />
-      </div>
+    <div ref={containerRef} className="flex flex-col gap-32 pb-20 relative overflow-hidden bg-[#0a0a0a]">
+      {/* Background Glows Removed for Cleaner Look */}
 
       {/* Hero Section */}
       <section className="relative px-6 pt-10 md:pt-20 z-10 min-h-[90vh] flex items-center">
@@ -73,7 +68,7 @@ export default function Home() {
             <motion.div variants={itemVariants} className="flex flex-wrap items-center gap-5 pt-4">
               <Link
                 href="/dashboard"
-                className="px-8 py-4 rounded-2xl bg-gradient-to-r from-brand-start to-brand-end text-white font-bold text-lg transition-all shadow-[0_0_40px_rgba(102,126,234,0.3)] hover:shadow-[0_0_60px_rgba(102,126,234,0.5)] flex items-center gap-3 group hover:-translate-y-1"
+                className="px-8 py-4 rounded-2xl bg-gradient-to-r from-brand-start to-brand-end text-white font-bold text-lg transition-all shadow-[0_0_20px_rgba(37,99,235,0.3)] hover:shadow-[0_0_30px_rgba(37,99,235,0.4)] flex items-center gap-3 group hover:-translate-y-1"
               >
                 Start Contributing
                 <MoveRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
@@ -112,7 +107,7 @@ export default function Home() {
             transition={{ duration: 1.2, ease: "easeOut" }}
             className="relative perspective-1000 group"
           >
-            <div className="absolute inset-0 bg-gradient-to-tr from-brand-start to-brand-end blur-2xl opacity-20 group-hover:opacity-30 transition-opacity duration-500" />
+            <div className="absolute inset-0 bg-gradient-to-tr from-brand-start to-brand-end blur-2xl opacity-10 group-hover:opacity-20 transition-opacity duration-500" />
             <div className="relative rounded-3xl overflow-hidden border border-white/10 shadow-2xl bg-[#0f0f0f] aspect-video group-hover:transform group-hover:scale-[1.02] transition-all duration-500">
               <Image
                 src="/real-demo.jpeg"
@@ -256,7 +251,7 @@ export default function Home() {
               viewport={{ once: true }}
               className="relative"
             >
-              <div className="absolute inset-0 bg-brand-start/20 blur-3xl -z-10 rounded-full" />
+              <div className="absolute inset-0 bg-brand-start/5 blur-2xl -z-10 rounded-full" />
               <Image
                 src="/feature-2.png"
                 alt="Capabilities Interface"

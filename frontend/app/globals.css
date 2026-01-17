@@ -1,10 +1,12 @@
 @import "tailwindcss";
 
 :root {
-  --background: #0f172a;
-  --foreground: #f8fafc;
-  --brand-start: #667eea;
-  --brand-end: #764ba2;
+  --background: #0a0a0a;
+  --foreground: #ffffff;
+  --brand-start: #2563eb;
+  /* Blue 600 */
+  --brand-end: #0ea5e9;
+  /* Sky 500 */
 }
 
 @theme inline {
@@ -25,36 +27,10 @@ body {
   overflow-x: hidden;
 }
 
-/* Background gradient orb effect */
-body::before {
-  content: '';
-  position: fixed;
-  top: -10%;
-  left: -10%;
-  width: 50vw;
-  height: 50vw;
-  background: radial-gradient(circle, rgba(102, 126, 234, 0.15) 0%, rgba(0, 0, 0, 0) 70%);
-  z-index: -1;
-  pointer-events: none;
-}
-
-body::after {
-  content: '';
-  position: fixed;
-  bottom: -10%;
-  right: -10%;
-  width: 50vw;
-  height: 50vw;
-  background: radial-gradient(circle, rgba(118, 75, 162, 0.15) 0%, rgba(0, 0, 0, 0) 70%);
-  z-index: -1;
-  pointer-events: none;
-}
-
 .glass-panel {
-  background: rgba(255, 255, 255, 0.03);
-  backdrop-filter: blur(10px);
+  background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
 
 .brand-gradient {
@@ -62,7 +38,7 @@ body::after {
 }
 
 .text-gradient {
-  background: linear-gradient(135deg, #a5b4fc 0%, #d8b4fe 100%);
+  background: linear-gradient(135deg, #60a5fa 0%, #ffffff 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
