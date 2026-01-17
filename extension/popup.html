@@ -161,6 +161,33 @@
             margin-bottom: 16px;
         }
 
+        .notification {
+            background: rgba(16, 185, 129, 0.2);
+            border: 1px solid rgba(16, 185, 129, 0.4);
+            border-radius: 8px;
+            padding: 12px;
+            font-size: 12px;
+            margin-bottom: 16px;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        .notification.error {
+            background: rgba(239, 68, 68, 0.2);
+            border-color: rgba(239, 68, 68, 0.4);
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
         .instructions h3 {
             font-size: 13px;
             margin-bottom: 8px;
@@ -198,6 +225,7 @@
             opacity: 1;
         }
 
+        .clear-cache-btn,
         .refresh-btn {
             width: 100%;
             padding: 10px;
@@ -209,6 +237,17 @@
             font-weight: 500;
             cursor: pointer;
             transition: all 0.2s;
+            margin-bottom: 8px;
+        }
+
+        .clear-cache-btn {
+            background: rgba(239, 68, 68, 0.3);
+            border: 1px solid rgba(239, 68, 68, 0.5);
+        }
+
+        .clear-cache-btn:hover {
+            background: rgba(239, 68, 68, 0.4);
+            transform: translateY(-1px);
         }
 
         .refresh-btn:hover {
@@ -216,6 +255,7 @@
             transform: translateY(-1px);
         }
 
+        .clear-cache-btn:active,
         .refresh-btn:active {
             transform: translateY(0);
         }
@@ -227,6 +267,9 @@
         <h1>🤟 Sign Language</h1>
         <p>for YouTube</p>
     </div>
+
+    <!-- Notification area -->
+    <div class="notification" id="notification" style="display: none;"></div>
 
     <div class="status-card">
         <div class="status-row">
@@ -262,6 +305,7 @@
         <p>Try these short videos to test the extension.</p>
     </div>
 
+    <button class="clear-cache-btn" id="clearCacheBtn">🗑️ Clear Cache</button>
     <button class="refresh-btn" id="refreshBtn">🔄 Refresh Server Status</button>
 
     <script src="popup.js"></script>

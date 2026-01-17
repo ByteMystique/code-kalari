@@ -4,6 +4,20 @@ document.addEventListener('DOMContentLoaded', () => {
     const statusText = document.getElementById('statusText');
     const overlayToggle = document.getElementById('overlayToggle');
     const refreshBtn = document.getElementById('refreshBtn');
+    const clearCacheBtn = document.getElementById('clearCacheBtn');
+    const notification = document.getElementById('notification');
+
+    // Show notification message
+    function showNotification(message, isError = false) {
+        notification.textContent = message;
+        notification.className = isError ? 'notification error' : 'notification';
+        notification.style.display = 'block';
+
+        // Auto-hide after 3 seconds
+        setTimeout(() => {
+            notification.style.display = 'none';
+        }, 3000);
+    }
 
     // Check backend server status
     function checkServerStatus() {
@@ -41,6 +55,26 @@ document.addEventListener('DOMContentLoaded', () => {
                     enabled: isActive
                 });
             }
+        });
+    });
+
+    // Clear cache button
+    clearCacheBtn.addEventListener('click', () => {
+        // Get all storage keys
+        chrome.storage.local.get(null, (items) => {
+            // Find all transcription cache keys
+            const cacheKeys = Object.keys(items).filter(key => key.startsWith('transcription_'));
+
+            if (cacheKeys.length === 0) {
+                showNotification('No cached transcriptions found.', true);
+                return;
+            }
+
+            // Remove all cache keys
+            chrome.storage.local.remove(cacheKeys, () => {
+                showNotification(`✅ Cleared ${cacheKeys.length} cached transcription(s). You can now re-process videos.`);
+                console.log('Cleared cache keys:', cacheKeys);
+            });
         });
     });
 

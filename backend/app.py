@@ -1,10 +1,23 @@
 import subprocess
+import os
+from pathlib import Path
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+import spacy
 
 # --- Flask App Initialization ---
 app = Flask(__name__)
 CORS(app)  # Enable CORS for Chrome extension
+
+# --- Load spaCy NLP Model ---
+print("Loading spaCy model...")
+try:
+    nlp = spacy.load("en_core_web_trf", disable=["ner"])  # Disable NER for performance
+    print("✅ spaCy model loaded successfully")
+except OSError:
+    print("⚠️  spaCy model 'en_core_web_trf' not found. Please install it:")
+    print("    python -m spacy download en_core_web_trf")
+    nlp = None
 
 # Simple word-to-sign mapping
 
@@ -94,6 +107,149 @@ WORD_TO_SIGN_MAPPING = {
     'without': 'WITHOUT'
 }
 
+# --- Build GIF Index ---
+def build_gif_index():
+    """
+    Scan the extension/gif folder and build a mapping of lowercase words to GIF filenames.
+    Returns dict like: {"volcano": "Volcano.gif", "kill": "Kill.gif"}
+    """
+    gif_index = {}
+    
+    # Get the path to the gif folder (relative to this script)
+    script_dir = Path(__file__).parent
+    gif_dir = script_dir.parent / "extension" / "gif"
+    
+    if not gif_dir.exists():
+        print(f"⚠️  GIF directory not found: {gif_dir}")
+        return gif_index
+    
+    # Scan for all .gif files
+    for gif_file in gif_dir.glob("*.gif"):
+        # Remove .gif extension and convert to lowercase for matching
+        word = gif_file.stem.lower()
+        gif_index[word] = gif_file.name
+    
+    print(f"✅ Built GIF index with {len(gif_index)} entries")
+    return gif_index
+
+# Build the GIF index at startup
+GIF_INDEX = build_gif_index()
+
+# --- Time words for ASL grammar ---
+TIME_WORDS = {
+    "yesterday", "today", "tomorrow", "evening", "morning", "night",
+    "now", "later", "soon", "always", "never", "sometimes",
+    "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday",
+    "january", "february", "march", "april", "may", "june",
+    "july", "august", "september", "october", "november", "december"
+}
+
+# --- NLP Processing Functions ---
+def extract_asl_tokens(doc):
+    """
+    Extract and reorder tokens according to ASL grammar: TIME → SUBJECT → VERB → OBJECT → OTHER
+    Returns a list of uppercase lemmatized tokens.
+    """
+    time_words = []
+    subject = []
+    verb = []
+    obj = []
+    other_important = []
+    
+    for token in doc:
+        # Skip punctuation and whitespace
+        if token.is_punct or token.is_space:
+            continue
+        
+        # Time expressions (explicit words + NER)
+        if token.text.lower() in TIME_WORDS or token.ent_type_ in ["DATE", "TIME"]:
+            time_words.append(token.lemma_.upper())
+        
+        # Subject (pronouns + nouns in subject position)
+        elif token.dep_ == "nsubj":
+            subject.append(token.lemma_.upper())
+        
+        # Main verb (root of sentence)
+        elif token.dep_ == "ROOT" and token.pos_ == "VERB":
+            verb.append(token.lemma_.upper())
+        
+        # Objects (direct objects, prepositional objects)
+        elif token.dep_ in ["dobj", "pobj"] and token.pos_ in ["NOUN", "PROPN"]:
+            obj.append(token.lemma_.upper())
+        
+        # Other important words (adjectives, important nouns, adverbs)
+        elif token.pos_ in ["NOUN", "PROPN", "ADJ"] and not token.is_stop:
+            other_important.append(token.lemma_.upper())
+        
+        # Negation words
+        elif token.dep_ == "neg" or token.text.lower() in ["not", "never", "no"]:
+            verb.insert(0, token.lemma_.upper())  # Put negation before verb
+    
+    # ASL order: TIME → SUBJECT → VERB → OBJECT → OTHER
+    all_tokens = time_words + subject + verb + obj + other_important
+    
+    # Remove duplicates while preserving order
+    seen = set()
+    unique_tokens = []
+    for token in all_tokens:
+        if token not in seen:
+            seen.add(token)
+            unique_tokens.append(token)
+    
+    return unique_tokens
+
+def process_text_with_nlp(text):
+    """
+    Process text with spaCy NLP to extract ASL-ordered tokens.
+    Falls back to simple word extraction if NLP is not available.
+    Returns list of uppercase tokens.
+    """
+    if nlp is None:
+        # Fallback: simple word extraction with dictionary lookup
+        print("⚠️  NLP not available, using fallback dictionary lookup")
+        tokens = [
+            WORD_TO_SIGN_MAPPING[word.lower()] 
+            for word in text.strip().replace('.', '').replace(',', '').split() 
+            if word and word.lower() in WORD_TO_SIGN_MAPPING
+        ]
+        return tokens
+    
+    # Parse text with spaCy
+    doc = nlp(text)
+    
+    # Extract ASL-ordered tokens
+    tokens = extract_asl_tokens(doc)
+    
+    print(f"🔍 Extracted tokens before filtering: {tokens}")
+    
+    # Filter to only include tokens that have corresponding GIF files
+    available_tokens = []
+    for token in tokens:
+        token_lower = token.lower()
+        matched = False
+        
+        # Try exact match (e.g., "VOLCANO" -> "volcano.gif")
+        if token_lower in GIF_INDEX:
+            available_tokens.append(token)
+            matched = True
+            print(f"  ✅ Matched '{token}' -> {GIF_INDEX[token_lower]}")
+        
+        # Try fallback to dictionary mapping (e.g., "GO" might map to something else)
+        elif token_lower in WORD_TO_SIGN_MAPPING:
+            mapped_token = WORD_TO_SIGN_MAPPING[token_lower]
+            mapped_lower = mapped_token.lower()
+            if mapped_lower in GIF_INDEX:
+                available_tokens.append(mapped_token)
+                matched = True
+                print(f"  ✅ Mapped '{token}' -> '{mapped_token}' -> {GIF_INDEX[mapped_lower]}")
+        
+        if not matched:
+            print(f"  ❌ No GIF found for '{token}'")
+    
+    return available_tokens
+
+
+
 def time_to_seconds(time_str):
     """
     Convert VTT timestamp (e.g., [hh:mm:ss.mmm] or hh:mm:ss.mmm) to seconds as float.
@@ -162,12 +318,15 @@ def parse_vtt(vtt_str):
                     text += ' ' + lines[i].strip()
                     i += 1
 
-                # Filter words that are in WORD_TO_SIGN_MAPPING (case-insensitive)
-                tokens = [
-                    WORD_TO_SIGN_MAPPING[word.lower()] 
-                    for word in text.strip().replace('.', '').replace(',', '').split() 
-                    if word and word.lower() in WORD_TO_SIGN_MAPPING
-                ]
+
+                # Process text with NLP to extract ASL-ordered tokens
+                # This replaces the old dictionary lookup approach
+                tokens = process_text_with_nlp(text)
+                
+                # Log for debugging
+                if tokens:
+                    print(f"📝 VTT text: '{text}' → Tokens: {tokens}")
+
                 
                 if tokens:
                     sign_tokens.append({
