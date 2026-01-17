@@ -114,8 +114,8 @@ export class SignAnimator {
     }
 
     startAnimationLoop() {
-        const speed = 0.1;
-        const pause = 800;
+        const speed = 0.2; // Speed up animation
+        const pause = 300; // Reduce pause between letters
 
         this.ref.animate = () => {
             if (this.paused) return;
@@ -196,9 +196,12 @@ export class SignAnimator {
                     alphabets[upperWord](this.ref);
                 } else {
                     // Spell it out
+                    // Show full word, don't update per letter
+                    this.ref.animations.push(['add-text', upperWord]);
+
                     for (const [index, ch] of upperWord.split('').entries()) {
                         const isLast = index === upperWord.length - 1;
-                        this.ref.animations.push(['add-text', ch]);
+                        // this.ref.animations.push(['add-text', ch]); // Removed to keep full word visible
                         if (alphabets[ch]) {
                             alphabets[ch](this.ref);
                         } else {
