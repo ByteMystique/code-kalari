@@ -1,0 +1,17 @@
+[
+  {
+    "word": "hi",
+    "user": "Contributor",
+    "timestamp": "2026-01-17T17:09:09.044Z"
+  },
+  {
+    "word": "hello",
+    "user": "System",
+    "timestamp": "2026-01-16T10:00:00.000Z"
+  },
+  {
+    "word": "world",
+    "user": "System",
+    "timestamp": "2026-01-16T10:05:00.000Z"
+  }
+]

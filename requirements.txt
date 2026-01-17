@@ -5,4 +5,4 @@ flask-cors
 yt-dlp
 openai-whisper
 spacy[transformers]
-'''en-core-web-trf Install this'''
+
