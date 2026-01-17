@@ -83,6 +83,13 @@ document.addEventListener('DOMContentLoaded', () => {
         checkServerStatus();
     });
 
+    // Contribute button - opens the contribution portal
+    const contributeBtn = document.getElementById('contributeBtn');
+    contributeBtn.addEventListener('click', () => {
+        // Open the Next.js frontend contribution portal
+        chrome.tabs.create({ url: 'http://localhost:3000' });
+    });
+
     // Initial status check
     checkServerStatus();
 });
