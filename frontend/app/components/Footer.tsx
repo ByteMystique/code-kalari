@@ -69,20 +69,6 @@ export function Footer() {
                         </div>
                     </div>
                 </div>
-
-                <div className="border-t border-white/5 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
-                    <div className="text-gray-500 text-sm flex items-center gap-2">
-                        © {new Date().getFullYear()} Code Kalari.
-                        <span className="w-1 h-1 rounded-full bg-gray-700" />
-                        Built with <Heart className="w-3 h-3 text-red-500 inline fill-current" /> in India.
-                    </div>
-                    <div className="flex items-center gap-6 text-sm text-gray-500">
-                        <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                            System Operational
-                        </div>
-                    </div>
-                </div>
             </div>
         </footer>
     );

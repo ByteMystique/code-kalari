@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { motion, useScroll, useTransform } from "framer-motion";
-import { MoveRight, Youtube, Ear, BookOpen, Zap, Globe, Heart, Layers, Grid3X3 } from "lucide-react";
+import { MoveRight, Youtube, Ear, BookOpen, Zap, Globe, Heart, Layers, Grid3X3, User } from "lucide-react";
 import { useRef } from "react";
 
 export default function Home() {
@@ -172,7 +172,7 @@ export default function Home() {
             <h2 className="text-brand-start font-bold tracking-wider uppercase text-sm">Our Mission</h2>
             <h3 className="text-4xl md:text-5xl font-bold leading-tight">One Extension. <br /><span className="text-gradient">Every Platform.</span></h3>
             <p className="text-lg text-gray-400 leading-relaxed border-l-4 border-brand-start pl-6">
-              We are Code Kalari, and we believe accessibility shouldn't be limited to one website. While we are starting with YouTube, our architecture is designed to overlay on any video content on the web.
+              We are StrawHats, and we believe accessibility shouldn't be limited to one website. While we are starting with YouTube, our architecture is designed to overlay on any video content on the web.
             </p>
             <p className="text-lg text-gray-400 leading-relaxed">
               From university lectures on Zoom to daily stand-ups on Microsoft Teams, our goal is to bring expressive, real-time sign language interpretation to every digital conversation.
@@ -223,6 +223,12 @@ export default function Home() {
                   color: "text-green-400",
                   title: "Expanding Dictionary",
                   desc: "A constantly growing database of crowdsourced GIFs and animations."
+                },
+                {
+                  icon: User,
+                  color: "text-blue-400",
+                  title: "3D Avatar Fallback",
+                  desc: "Seamless 3D character animation when standard GIFs are unavailable."
                 }
               ].map((feature, i) => (
                 <motion.div
@@ -277,7 +283,7 @@ export default function Home() {
             <div>
               <h3 className="text-3xl font-bold mb-6">What's Next for SignTube?</h3>
               <p className="text-lg text-gray-400 mb-6 leading-relaxed">
-                We are just getting started. Our roadmap includes full sentence synthesis, 3D avatar integration, and support for multiple sign languages (ASL, BSL, ISL).
+                We are just getting started. Our roadmap includes full sentence synthesis and support for multiple sign languages (ASL, BSL, ISL).
               </p>
               <ul className="space-y-4">
                 {[
@@ -311,7 +317,7 @@ export default function Home() {
                 Contribute Now
               </Link>
               <a
-                href="https://github.com/Start-Hawk/code-kalari"
+                href="https://github.com/ByteMystique/code-kalari"
                 target="_blank"
                 rel="noreferrer"
                 className="px-10 py-4 rounded-xl border border-white/20 hover:bg-white/5 font-semibold text-lg transition-all"
