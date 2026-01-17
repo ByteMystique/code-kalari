@@ -29,8 +29,8 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ success: false, message: "Invalid word" }, { status: 400 });
         }
 
-        // Target directory: ../extension/gif
-        const targetDir = path.resolve(process.cwd(), "../extension/gif");
+        // Target directory: ../gif
+        const targetDir = path.resolve(process.cwd(), "../gif");
 
         // Ensure directory exists
         if (!existsSync(targetDir)) {

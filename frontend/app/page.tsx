@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { motion, useScroll, useTransform } from "framer-motion";
-import { MoveRight, Youtube, Ear, BookOpen, Zap, Globe, Heart, Layers } from "lucide-react";
+import { MoveRight, Youtube, Ear, BookOpen, Zap, Globe, Heart, Layers, Grid3X3 } from "lucide-react";
 import { useRef } from "react";
 
 export default function Home() {
@@ -78,6 +78,13 @@ export default function Home() {
                 Start Contributing
                 <MoveRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
               </Link>
+              <Link
+                href="/explore"
+                className="px-8 py-4 rounded-2xl glass-panel hover:bg-white/10 text-white font-semibold transition-all hover:border-white/30 flex items-center gap-2 group hover:-translate-y-1"
+              >
+                <Grid3X3 className="w-5 h-5" />
+                Explore Dictionary
+              </Link>
               <button className="px-8 py-4 rounded-2xl glass-panel hover:bg-white/10 text-white font-semibold transition-all hover:border-white/30 flex items-center gap-2">
                 <Youtube className="w-5 h-5" />
                 Watch Demo
@@ -106,12 +113,12 @@ export default function Home() {
             className="relative perspective-1000 group"
           >
             <div className="absolute inset-0 bg-gradient-to-tr from-brand-start to-brand-end blur-2xl opacity-20 group-hover:opacity-30 transition-opacity duration-500" />
-            <div className="relative rounded-3xl overflow-hidden border border-white/10 shadow-2xl bg-[#0f0f0f] aspect-[16/10] group-hover:transform group-hover:scale-[1.02] transition-all duration-500">
+            <div className="relative rounded-3xl overflow-hidden border border-white/10 shadow-2xl bg-[#0f0f0f] aspect-video group-hover:transform group-hover:scale-[1.02] transition-all duration-500">
               <Image
                 src="/real-demo.jpeg"
                 alt="SignTube Demo"
                 fill
-                className="object-cover opacity-90 hover:opacity-100 transition-opacity duration-500"
+                className="object-contain opacity-90 hover:opacity-100 transition-opacity duration-500"
               />
 
               {/* Floating Overlay Card UI */}

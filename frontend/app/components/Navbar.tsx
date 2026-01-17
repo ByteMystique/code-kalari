@@ -5,13 +5,14 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
 import { clsx } from "clsx";
-import { Github, Upload, Home } from "lucide-react";
+import { Github, Upload, Home, Grid3X3 } from "lucide-react";
 
 export function Navbar() {
   const pathname = usePathname();
 
   const navItems = [
     { name: "Home", href: "/", icon: Home },
+    { name: "Explore", href: "/explore", icon: Grid3X3 },
     { name: "Dashboard", href: "/dashboard", icon: Upload },
   ];
 
@@ -65,7 +66,7 @@ export function Navbar() {
           </div>
 
           <a
-            href="https://github.com/Start-Hawk/code-kalari"
+            href="https://github.com/ByteMystique/code-kalari"
             target="_blank"
             rel="noopener noreferrer"
             className="hidden md:flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-white text-sm font-medium transition-all border border-white/10 hover:border-white/30"

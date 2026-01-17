@@ -22,7 +22,7 @@ export function Footer() {
                             <a href="#" className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center hover:bg-brand-start hover:text-white transition-all text-gray-400">
                                 <Twitter className="w-4 h-4" />
                             </a>
-                            <a href="#" className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center hover:bg-brand-start hover:text-white transition-all text-gray-400">
+                            <a href="https://github.com/ByteMystique/code-kalari" target="_blank" className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center hover:bg-brand-start hover:text-white transition-all text-gray-400">
                                 <Github className="w-4 h-4" />
                             </a>
                             <a href="#" className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center hover:bg-brand-start hover:text-white transition-all text-gray-400">
