@@ -4,3 +4,5 @@ flask
 flask-cors
 yt-dlp
 openai-whisper
+spacy[transformers]
+en-core-web-trf
