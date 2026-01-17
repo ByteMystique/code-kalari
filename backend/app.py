@@ -1,7 +1,7 @@
 import subprocess
 import os
 from pathlib import Path
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 import spacy
 
@@ -110,14 +110,14 @@ WORD_TO_SIGN_MAPPING = {
 # --- Build GIF Index ---
 def build_gif_index():
     """
-    Scan the extension/gif folder and build a mapping of lowercase words to GIF filenames.
+    Scan the gif folder and build a mapping of lowercase words to GIF filenames.
     Returns dict like: {"volcano": "Volcano.gif", "kill": "Kill.gif"}
     """
     gif_index = {}
     
     # Get the path to the gif folder (relative to this script)
     script_dir = Path(__file__).parent
-    gif_dir = script_dir.parent / "extension" / "gif"
+    gif_dir = script_dir.parent / "gif"
     
     if not gif_dir.exists():
         print(f"⚠️  GIF directory not found: {gif_dir}")
@@ -356,6 +356,26 @@ def health_check():
         "message": "Sign Language Backend is running",
         "version": "1.0.0"
     })
+
+
+# --- GIF File Serving Endpoint ---
+@app.route('/gif/<filename>', methods=['GET'])
+def serve_gif(filename):
+    """
+    Serve GIF files from the gif directory.
+    """
+    gif_dir = Path(__file__).parent.parent / 'gif'
+    
+    # Security: Only allow .gif and .webp files
+    if not (filename.endswith('.gif') or filename.endswith('.webp')):
+        return jsonify({"error": "Invalid file type"}), 400
+    
+    # Check if file exists
+    file_path = gif_dir / filename
+    if not file_path.exists():
+        return jsonify({"error": "GIF not found"}), 404
+    
+    return send_from_directory(gif_dir, filename)
 
 
 # --- API Endpoint for YouTube Transcription ---

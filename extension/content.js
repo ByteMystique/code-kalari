@@ -1,6 +1,9 @@
 // Content script for YouTube sign language overlay
 console.log('Sign Language Extension: Content script loaded');
 
+// Backend URL for API and GIF serving
+const BACKEND_URL = 'http://localhost:5001';
+
 let signOverlay = null;
 let currentSignTokens = null;
 let isOverlayEnabled = false;
@@ -252,7 +255,7 @@ function playNextSignInQueue() {
     }
 
     if (word) {
-        const gifPath = chrome.runtime.getURL(`gif/${word.toLowerCase()}.gif`);
+        const gifPath = `${BACKEND_URL}/gif/${word.toLowerCase()}.gif`;
         console.log(`🎬 Playing GIF for word: "${word}" from ${gifPath}`);
 
         // Create a new image to get the GIF duration
