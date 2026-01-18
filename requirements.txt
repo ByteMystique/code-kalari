@@ -1,8 +1,14 @@
-spacy
-
-flask
+# Core Dependencies
+flask==3.1.2
 flask-cors
+
+# YouTube Download
 yt-dlp
-openai-whisper
+
+# NLP Processing
+spacy==3.8.11
 spacy[transformers]
 
+# Groq API for Whisper
+groq==1.0.0
+python-dotenv==1.2.1

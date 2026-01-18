@@ -1,9 +1,15 @@
 import subprocess
 import os
+import tempfile
 from pathlib import Path
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 import spacy
+from groq import Groq
+from dotenv import load_dotenv
+
+load_dotenv()
+groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
 # --- Flask App Initialization ---
 app = Flask(__name__)
@@ -20,7 +26,6 @@ except OSError:
     nlp = None
 
 # Simple word-to-sign mapping
-
 WORD_TO_SIGN_MAPPING = {
     # Original Words
     'hello': 'HELLO',
@@ -220,129 +225,61 @@ def process_text_with_nlp(text):
     # Extract ASL-ordered tokens
     tokens = extract_asl_tokens(doc)
     
-    print(f"🔍 Extracted tokens before filtering: {tokens}")
+    print(f"🔍 Extracted tokens: {tokens}")
     
-    # Filter to only include tokens that have corresponding GIF files
-    available_tokens = []
+    # Log which tokens have GIFs available (but don't filter them out!)
+    # The frontend will handle GIF vs 3D fallback
     for token in tokens:
         token_lower = token.lower()
-        matched = False
         
         # Try exact match (e.g., "VOLCANO" -> "volcano.gif")
         if token_lower in GIF_INDEX:
-            available_tokens.append(token)
-            matched = True
-            print(f"  ✅ Matched '{token}' -> {GIF_INDEX[token_lower]}")
+            print(f"  ✅ GIF available for '{token}' -> {GIF_INDEX[token_lower]}")
         
-        # Try fallback to dictionary mapping (e.g., "GO" might map to something else)
+        # Try fallback to dictionary mapping
         elif token_lower in WORD_TO_SIGN_MAPPING:
             mapped_token = WORD_TO_SIGN_MAPPING[token_lower]
             mapped_lower = mapped_token.lower()
             if mapped_lower in GIF_INDEX:
-                available_tokens.append(mapped_token)
-                matched = True
-                print(f"  ✅ Mapped '{token}' -> '{mapped_token}' -> {GIF_INDEX[mapped_lower]}")
-        
-        if not matched:
-            print(f"  ❌ No GIF found for '{token}'")
-    
-    return available_tokens
-
-
-
-def time_to_seconds(time_str):
-    """
-    Convert VTT timestamp (e.g., [hh:mm:ss.mmm] or hh:mm:ss.mmm) to seconds as float.
-    Returns None if the timestamp is invalid.
-    """
-    try:
-        # FIX: More robustly remove whitespace and any surrounding brackets
-        time_str = time_str.strip().strip('[]')
-        parts = time_str.split(':')
-        ms = 0.0
-        if len(parts) == 3:
-            h, m, s = parts
-            if '.' in s:
-                s, ms_str = s.split('.')
-                ms = float(ms_str) / 1000
-            return float(h) * 3600 + float(m) * 60 + float(s) + ms
-        elif len(parts) == 2:
-            m, s = parts
-            if '.' in s:
-                s, ms_str = s.split('.')
-                ms = float(ms_str) / 1000
-            return float(m) * 60 + float(s) + ms
+                print(f"  ✅ GIF available for '{token}' (mapped to '{mapped_token}') -> {GIF_INDEX[mapped_lower]}")
+            else:
+                print(f"  ⚠️  No GIF for '{token}' (will use 3D animation)")
         else:
-            print(f"Invalid timestamp format: {time_str}")
-            return None
-    except (ValueError, Exception) as e:
-        print(f"Error parsing timestamp '{time_str}': {e}")
-        return None
+            print(f"  ⚠️  No GIF for '{token}' (will use 3D animation)")
+    
+    return tokens
 
-def parse_vtt(vtt_str):
+
+def parse_groq_segments(segments):
     """
-    Parse VTT content into list of dicts with start, end, and tokens (filtered by WORD_TO_SIGN_MAPPING).
-    Skips invalid timestamps and logs them for debugging.
+    Parse Groq Whisper API segments into list of dicts with start, end, and tokens.
+    Segments are in the format: [{"start": 0.0, "end": 2.5, "text": "Hello world"}, ...]
     """
-    lines = vtt_str.splitlines()
     sign_tokens = []
-    invalid_timestamps = []
-    i = 0
-    while i < len(lines):
-        line = lines[i].strip()
-        if not line or line == 'WEBVTT':
-            i += 1
+    
+    for segment in segments:
+        start = segment.get("start", 0)
+        end = segment.get("end", 0)
+        text = segment.get("text", "").strip()
+        
+        if not text:
             continue
         
-        # FIX: Handle cases where timestamp and text are on the same line
-        if '-->' in line:
-            try:
-                # Separate the timestamp part from the potential text on the same line
-                time_part, *text_on_same_line_parts = line.split(maxsplit=2) if ']' not in line else line.split(']', 1)
-                start_str, end_str = time_part.split(' --> ')
-                
-                start = time_to_seconds(start_str)
-                end = time_to_seconds(end_str)
-
-                if start is None or end is None:
-                    invalid_timestamps.append(line)
-                    i += 1
-                    continue
-                
-                # Join any text found on the same line
-                text = "".join(text_on_same_line_parts).strip()
-                i += 1
-                
-                # Collect any additional multi-line text
-                while i < len(lines) and lines[i].strip() and '-->' not in lines[i]:
-                    text += ' ' + lines[i].strip()
-                    i += 1
-
-
-                # Process text with NLP to extract ASL-ordered tokens
-                # This replaces the old dictionary lookup approach
-                tokens = process_text_with_nlp(text)
-                
-                # Log for debugging
-                if tokens:
-                    print(f"📝 VTT text: '{text}' → Tokens: {tokens}")
-
-                
-                if tokens:
-                    sign_tokens.append({
-                        "start": start,
-                        "end": end,
-                        "tokens": tokens
-                    })
-
-            except ValueError:
-                # This handles malformed '-->' lines that can't be split properly
-                i += 1
-                continue
-        else:
-            i += 1
-            
-    return sign_tokens, invalid_timestamps
+        # Process text with NLP to extract ASL-ordered tokens
+        tokens = process_text_with_nlp(text)
+        
+        # Log for debugging
+        if tokens:
+            print(f"🔍 Segment text: '{text}' → Tokens: {tokens}")
+        
+        if tokens:
+            sign_tokens.append({
+                "start": start,
+                "end": end,
+                "tokens": tokens
+            })
+    
+    return sign_tokens
 
 
 # --- Health Check Endpoint ---
@@ -354,7 +291,7 @@ def health_check():
     return jsonify({
         "status": "healthy",
         "message": "Sign Language Backend is running",
-        "version": "1.0.0"
+        "version": "2.0.0 (Groq Whisper)"
     })
 
 
@@ -382,8 +319,8 @@ def serve_gif(filename):
 @app.route('/transcribe-youtube', methods=['POST'])
 def transcribe_youtube():
     """
-    Accepts a YouTube URL in a JSON POST request, transcribes the audio,
-    parses the VTT transcription, and returns relevant words from WORD_TO_SIGN_MAPPING with timestamps as JSON.
+    Accepts a YouTube URL in a JSON POST request, downloads the audio,
+    transcribes it using Groq's Whisper API, and returns sign tokens with timestamps.
     """
     # 1. Get the YouTube URL from the incoming JSON request
     data = request.get_json()
@@ -393,78 +330,95 @@ def transcribe_youtube():
     youtube_url = data['youtube_url']
     print(f"Received YouTube URL: {youtube_url}")
 
-    ffmpeg_process = None
-    whisper_process = None
+    actual_audio_path = None
 
     try:
-        # 2. Use yt-dlp to get the best audio-only stream URL
-        print("Fetching direct audio URL with yt-dlp...")
-        yt_dlp_command = ["yt-dlp", "-f", "bestaudio", "-g", youtube_url]
-        audio_url = subprocess.check_output(yt_dlp_command, text=True).strip()
-        print(f"✅ Got audio stream URL: {audio_url}")
+        # 2. Create a temporary directory and file path
+        temp_dir = tempfile.gettempdir()
+        temp_audio_path = os.path.join(temp_dir, f"youtube_audio_{os.getpid()}.%(ext)s")
+        
+        print(f"Temporary audio path template: {temp_audio_path}")
 
-        # 3. Define the ffmpeg and whisper commands for the pipeline
-        print("Starting ffmpeg and whisper pipeline...")
-        ffmpeg_command = [
-            "ffmpeg",
-            "-i", audio_url,
-            "-f", "wav",
-            "-ar", "16000",
-            "-ac", "1",
-            "-",  # Pipe output to stdout
-            "-loglevel", "error"  # Suppress verbose ffmpeg info
+        # 3. Use yt-dlp to download the audio
+        print("Downloading audio with yt-dlp...")
+        yt_dlp_command = [
+            "yt-dlp",
+            "-f", "bestaudio",
+            "-o", temp_audio_path,
+            "--extract-audio",
+            "--audio-format", "mp3",
+            youtube_url
         ]
         
-        whisper_command = [
-            "whisper",
-            "-",  # Read audio from stdin
-            "--model", "base",
-            "--output_format", "vtt"
-        ]
-
-        # 4. Start the ffmpeg process
-        ffmpeg_process = subprocess.Popen(ffmpeg_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-
-        # 5. Start the whisper process, piping ffmpeg's output to its input
-        whisper_process = subprocess.Popen(
-            whisper_command, 
-            stdin=ffmpeg_process.stdout, 
-            stdout=subprocess.PIPE, 
-            stderr=subprocess.PIPE
-        )
-
-        # 6. Get the final VTT output and any errors
-        vtt_content_bytes, whisper_err_bytes = whisper_process.communicate()
-        _, ffmpeg_err_bytes = ffmpeg_process.communicate()
-
-        if ffmpeg_process.returncode != 0:
-            raise RuntimeError(f"FFmpeg failed with error: {ffmpeg_err_bytes.decode('utf-8')}")
-
-        if whisper_process.returncode != 0:
-            raise RuntimeError(f"Whisper failed with error: {whisper_err_bytes.decode('utf-8')}")
-
-        print("✅ Pipeline finished successfully.")
+        result = subprocess.run(yt_dlp_command, check=True, capture_output=True, text=True)
+        print("✅ Audio downloaded successfully")
         
-        # 7. Parse the VTT content into the desired JSON format
-        vtt_content = vtt_content_bytes.decode('utf-8')
-        print(f"Raw VTT content:\n{vtt_content}")  # Log for debugging
-        sign_tokens, invalid_timestamps = parse_vtt(vtt_content)
+        # The actual filename after download (yt-dlp replaces %(ext)s with the actual extension)
+        actual_audio_path = temp_audio_path.replace("%(ext)s", "mp3")
+        
+        # Verify the file exists and has content
+        if not os.path.exists(actual_audio_path):
+            raise FileNotFoundError(f"Audio file not found at {actual_audio_path}")
+        
+        file_size = os.path.getsize(actual_audio_path)
+        if file_size == 0:
+            raise ValueError("Downloaded audio file is empty")
+        
+        print(f"✅ Audio file size: {file_size / 1024 / 1024:.2f} MB")
+
+        # 4. Transcribe using Groq's Whisper API
+        print("Transcribing with Groq Whisper API...")
+        with open(actual_audio_path, "rb") as file:
+            audio_data = file.read()
+            print(f"✅ Read {len(audio_data)} bytes from audio file")
+            
+            transcription = groq_client.audio.transcriptions.create(
+                file=(os.path.basename(actual_audio_path), audio_data),
+                model="whisper-large-v3-turbo",
+                response_format="verbose_json",  # Get timestamps
+                language="en",
+                temperature=0.0
+            )
+        
+        print("✅ Transcription completed")
+        
+        # 5. Parse the transcription segments
+        segments = transcription.segments if hasattr(transcription, 'segments') else []
+        sign_tokens = parse_groq_segments(segments)
         
         response = {
             "success": True,
-            "signTokens": sign_tokens
+            "signTokens": sign_tokens,
+            "fullText": transcription.text
         }
-        if invalid_timestamps:
-            response["warnings"] = f"Skipped {len(invalid_timestamps)} invalid timestamps: {invalid_timestamps}"
         
         return jsonify(response)
 
     except subprocess.CalledProcessError as e:
         print(f"Error with yt-dlp: {e}")
-        return jsonify({"success": False, "error": "Failed to fetch audio from YouTube URL.", "details": str(e)}), 500
-    except (RuntimeError, Exception) as e:
-        print(f"An error occurred in the pipeline: {e}")
-        return jsonify({"success": False, "error": "An error occurred during transcription.", "details": str(e)}), 500
+        return jsonify({
+            "success": False, 
+            "error": "Failed to download audio from YouTube URL.", 
+            "details": e.stderr.decode('utf-8') if e.stderr else str(e)
+        }), 500
+    
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        return jsonify({
+            "success": False, 
+            "error": "An error occurred during transcription.", 
+            "details": str(e)
+        }), 500
+    
+    finally:
+        # 6. Clean up temporary file
+        try:
+            if actual_audio_path and os.path.exists(actual_audio_path):
+                os.unlink(actual_audio_path)
+                print(f"✅ Cleaned up temporary file: {actual_audio_path}")
+        except Exception as e:
+            print(f"⚠️  Failed to delete temporary file: {e}")
+
 
 # --- Run the App ---
 if __name__ == '__main__':

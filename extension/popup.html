@@ -259,33 +259,6 @@
         .refresh-btn:active {
             transform: translateY(0);
         }
-
-        .contribute-btn {
-            width: 100%;
-            padding: 12px;
-            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            border-radius: 8px;
-            color: white;
-            font-size: 13px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
-            margin-top: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
-        }
-
-        .contribute-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
-        }
-
-        .contribute-btn:active {
-            transform: translateY(0);
-        }
     </style>
 </head>
 
@@ -332,19 +305,8 @@
         <p>Try these short videos to test the extension.</p>
     </div>
 
-    <div class="instructions" style="background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.3);">
-        <h3>🌟 Help Us Grow!</h3>
-        <p style="margin-bottom: 8px;">We currently have <strong>51 sign GIFs</strong>. Many words are still missing!
-        </p>
-        <p style="font-size: 11px; opacity: 0.9;">Click below to contribute missing signs and help make YouTube
-            accessible to everyone. 🤝</p>
-    </div>
-
     <button class="clear-cache-btn" id="clearCacheBtn">🗑️ Clear Cache</button>
     <button class="refresh-btn" id="refreshBtn">🔄 Refresh Server Status</button>
-    <button class="contribute-btn" id="contributeBtn">
-        ✨ Contribute Missing Signs
-    </button>
 
     <script src="popup.js"></script>
 </body>
