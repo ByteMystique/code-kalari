@@ -35,3 +35,4 @@ static/signs/*.gif
 
 # Backend generated VTT files
 backend/*.vtt
+.env
