@@ -96,6 +96,12 @@ document.addEventListener('DOMContentLoaded', () => {
         checkServerStatus();
     });
 
+    // Landing page button - opens the frontend landing page
+    const landingPageBtn = document.getElementById('landingPageBtn');
+    landingPageBtn.addEventListener('click', () => {
+        chrome.tabs.create({ url: 'http://localhost:3000' });
+    });
+
     // Initial status check
     checkServerStatus();
 });
