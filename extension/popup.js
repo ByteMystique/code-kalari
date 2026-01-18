@@ -24,15 +24,25 @@ document.addEventListener('DOMContentLoaded', () => {
         statusDot.className = 'status-dot checking';
         statusText.textContent = 'Checking...';
 
-        chrome.runtime.sendMessage({ action: 'checkHealth' }, (response) => {
-            if (response && response.success) {
-                statusDot.className = 'status-dot connected';
-                statusText.textContent = 'Connected';
-            } else {
-                statusDot.className = 'status-dot disconnected';
-                statusText.textContent = 'Offline';
-            }
-        });
+        try {
+            chrome.runtime.sendMessage({ action: 'checkHealth' }, (response) => {
+                if (chrome.runtime.lastError) {
+                    statusDot.className = 'status-dot disconnected';
+                    statusText.textContent = 'Offline';
+                    return;
+                }
+                if (response && response.success) {
+                    statusDot.className = 'status-dot connected';
+                    statusText.textContent = 'Connected';
+                } else {
+                    statusDot.className = 'status-dot disconnected';
+                    statusText.textContent = 'Offline';
+                }
+            });
+        } catch (e) {
+            statusDot.className = 'status-dot disconnected';
+            statusText.textContent = 'Error';
+        }
     }
 
     // Load overlay toggle state
@@ -53,6 +63,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 chrome.tabs.sendMessage(tabs[0].id, {
                     action: 'toggleOverlay',
                     enabled: isActive
+                }, (response) => {
+                    // Suppress error if content script not ready
+                    if (chrome.runtime.lastError) return;
                 });
             }
         });
@@ -81,6 +94,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // Refresh button
     refreshBtn.addEventListener('click', () => {
         checkServerStatus();
+    });
+
+    // Contribute button - opens the contribution portal
+    const contributeBtn = document.getElementById('contributeBtn');
+    contributeBtn.addEventListener('click', () => {
+        // Open the Next.js frontend contribution portal
+        chrome.tabs.create({ url: 'http://localhost:3000' });
     });
 
     // Initial status check
